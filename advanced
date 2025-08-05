@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Pod Booking</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    label, select, input, button {
+      display: block;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    .insights {
+      margin-top: 20px;
+      background: #f5f5f5;
+      padding: 10px;
+    }
+    #undoBtn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Study Pod Booking Form</h2>
+  <form id="bookingForm">
+    <label for="pod">Select Study Pod:</label>
+    <select id="pod" required>
+      <option value="">-- Select Pod --</option>
+      <option value="Pod A">Pod A</option>
+      <option value="Pod B">Pod B</option>
+      <option value="Pod C">Pod C</option>
+    </select>
+
+    <label for="time">Select Hour (0-23):</label>
+    <input type="number" id="time" min="0" max="23" required>
+
+    <label for="studentId">Student ID:</label>
+    <input type="text" id="studentId" required>
+
+    <button type="submit">Book</button>
+    <button type="button" id="undoBtn">Undo Last Booking</button>
+  </form>
+
+  <h3>Booking Records</h3>
+  <table id="bookingTable">
+    <thead>
+      <tr>
+        <th>Pod</th>
+        <th>Hour</th>
+        <th>Student ID</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="insights">
+    <h4>Live Insights</h4>
+    <p id="busiestHour"></p>
+    <p id="fillRate"></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('bookingForm');
+    const tableBody = document.querySelector('#bookingTable tbody');
+    const busiestHourText = document.getElementById('busiestHour');
+    const fillRateText = document.getElementById('fillRate');
+    const undoBtn = document.getElementById('undoBtn');
+
+    const bookings = [];
+    const bookingHistoryStack = [];
+    const podHours = 24 * 3;
+
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      const pod = document.getElementById('pod').value;
+      const time = parseInt(document.getElementById('time').value);
+      const studentId = document.getElementById('studentId').value.trim();
+
+      if (!pod || isNaN(time) || time < 0 || time > 23 || !studentId) return alert("Invalid input");
+      if (bookings.some(b => b.pod === pod && b.time === time)) return alert("This pod is already booked at this hour.");
+
+      const booking = { pod, time, studentId };
+      bookings.push(booking);
+      bookingHistoryStack.push(booking);
+      addToTable(booking);
+      updateInsights();
+      form.reset();
+    };
+
+    undoBtn.onclick = function () {
+      if (bookingHistoryStack.length === 0) return alert("No bookings to undo.");
+      const lastBooking = bookingHistoryStack.pop();
+      const index = bookings.findIndex(b => b.pod === lastBooking.pod && b.time === lastBooking.time && b.studentId === lastBooking.studentId);
+      if (index > -1) bookings.splice(index, 1);
+      renderTable();
+      updateInsights();
+    };
+
+    function addToTable(booking) {
+      const row = tableBody.insertRow();
+      row.insertCell(0).innerText = booking.pod;
+      row.insertCell(1).innerText = booking.time;
+      row.insertCell(2).innerText = booking.studentId;
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = "";
+      bookings.forEach(addToTable);
+    }
+
+    function updateInsights() {
+      const hourCount = {};
+      bookings.forEach(b => {
+        hourCount[b.time] = (hourCount[b.time] || 0) + 1;
+      });
+      let busiest = Object.entries(hourCount).reduce((a, b) => b[1] > a[1] ? b : a, [null, 0]);
+      busiestHourText.innerText = busiest[0] !== null ? `Busiest Hour: ${busiest[0]} (${busiest[1]} bookings)` : "No bookings yet.";
+
+      const fillRate = (bookings.length / podHours * 100).toFixed(2);
+      fillRateText.innerText = `Fill Rate: ${fillRate}% of total slots used`;
+    }
+  </script>
+</body>
+</html>
